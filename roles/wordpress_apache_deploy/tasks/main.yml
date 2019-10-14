@@ -1,0 +1,100 @@
+---
+# tasks file for wordpress_apache_deploy
+- apt_repository:
+    repo: ppa:ondrej/php
+
+- name: Cache updating
+  apt: 
+    update_cache: yes
+
+- name: Cache updating
+  apt: 
+    name: python3-pip
+    update_cache: yes
+
+- name: Installing LAMP
+  package:
+    name: ['apache2', 'mysql-server', 'php7.2', 'curl']
+    state: present
+
+- name: Installing php modules
+  apt:
+    name: ['php7.2-curl', 'php7.1-mcrypt', 'php7.2-gd', 'php-mbstring', 'php-xml', 'php-xmlrpc', 'php-dev', 'libmcrypt-dev', 'php-pear', 'php7.2-mysql', 'libapache2-mod-php']
+    update_cache: yes        
+    state: present 
+
+- pip:
+    name: pymysql
+  
+- name: Write to .my.cnf
+  blockinfile:
+    path: /home/dimas/.my.cnf
+    create: yes
+    insertafter: EOF
+    block: |
+          [client]
+          user=root
+          password="123qwe"
+
+- name: Creating db
+  mysql_db:
+    login_unix_socket: /var/run/mysqld/mysqld.sock 
+    name: wordpress
+    state: present
+    
+- name: Creating mysql user     
+  mysql_user:
+    login_unix_socket: /var/run/mysqld/mysqld.sock 
+    name: dimas
+    password: 123qwe
+    priv: '*.*:ALL,GRANT'
+  notify:
+    - start services
+
+- name: Write to .my.cnf
+  blockinfile:
+    path: /etc/php/7.2/cli/php.ini
+    insertafter: EOF
+    block: extension=mcrypt.so
+
+- name: Dooownloading wordpress and unpacking
+  get_url:  
+    url: https://wordpress.org/latest.tar.gz 
+    dest: /home/dimas
+
+- name: Unpacking wordpress archive
+  unarchive:
+    src: /home/dimas/wordpress-5.2.3.tar.gz
+    dest: /var/www/html
+    remote_src: yes
+  
+- name: Creating .htaccess
+  file: 
+    path: /var/www/html/wordpress/.htaccess
+    state: touch
+    mode: 0664
+    
+- name: Creating upgrade directory
+  file:
+    path: /var/www/html/wordpress/wp-content/upgrade
+    state: directory
+
+- name: Wordpress rights
+  shell: |
+    chown -R dimas:www-data /var/www/html
+    find /var/www/html -type d -exec chmod g+s {} \;
+    chmod g+w /var/www/html/wordpress/wp-content    
+    chmod -R g+w /var/www/html/wordpress/wp-content/themes
+    chmod -R g+w /var/www/html/wordpress/wp-content/plugins
+    
+- name: Get salt and write it to file
+  shell: curl -s https://api.wordpress.org/secret-key/1.1/salt/
+  register: salt
+    
+- name: Configuring wp-config
+  template:
+    src: wp-config.j2
+    dest: /var/www/html/wordpress/wp-config.php
+    mode: 0777
+  notify:
+    - restart services

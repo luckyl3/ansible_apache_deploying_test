@@ -1,0 +1,13 @@
+---
+# handlers file for wordpress_apache_deploy
+- name: start services
+  service: name={{ item }} state=started enabled=yes
+  with_items:
+    - apache2
+    - mysql
+
+- name: restart services
+  service: name={{ item }} state=restarted enabled=yes
+  with_items:
+    - apache2
+    - mysql 
