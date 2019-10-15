@@ -61,31 +61,44 @@
   get_url:  
     url: https://wordpress.org/latest.tar.gz 
     dest: /home/dimas
+  register: module_args 
+
+- debug:
+    msg: "{{ module_args ['dest']}}"
 
 - name: Unpacking wordpress archive
   unarchive:
-    src: /home/dimas/wordpress-5.2.3.tar.gz
+    src: "{{ module_args ['dest']}}"
+    dest: /home/dimas
+    mode: '0777'
+    remote_src: yes
+
+
+- name: Copy wordpress content to /var/www/html
+  copy:
+    src: /home/dimas/wordpress/
     dest: /var/www/html
     remote_src: yes
-  
+
+
 - name: Creating .htaccess
   file: 
-    path: /var/www/html/wordpress/.htaccess
+    path: /var/www/html/.htaccess
     state: touch
     mode: 0664
     
 - name: Creating upgrade directory
   file:
-    path: /var/www/html/wordpress/wp-content/upgrade
+    path: /var/www/html/wp-content/upgrade
     state: directory
 
 - name: Wordpress rights
   shell: |
     chown -R dimas:www-data /var/www/html
     find /var/www/html -type d -exec chmod g+s {} \;
-    chmod g+w /var/www/html/wordpress/wp-content    
-    chmod -R g+w /var/www/html/wordpress/wp-content/themes
-    chmod -R g+w /var/www/html/wordpress/wp-content/plugins
+    chmod g+w /var/www/html/wp-content    
+    chmod -R g+w /var/www/html/wp-content/themes
+    chmod -R g+w /var/www/html/wp-content/plugins
     
 - name: Get salt and write it to file
   shell: curl -s https://api.wordpress.org/secret-key/1.1/salt/
@@ -94,7 +107,13 @@
 - name: Configuring wp-config
   template:
     src: wp-config.j2
-    dest: /var/www/html/wordpress/wp-config.php
+    dest: /var/www/html/wp-config.php
     mode: 0777
+  
+- name: Remove index.html
+  file:
+    state: absent
+    path: /var/www/html/index.html
+
   notify:
     - restart services
