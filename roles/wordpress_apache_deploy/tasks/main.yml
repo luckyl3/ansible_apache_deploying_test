@@ -1,32 +1,25 @@
 ---
 # tasks file for wordpress_apache_deploy
 - apt_repository:
-    repo: ppa:ondrej/php
+    repo: ppa:ondrej/php  #Добавление репозитория для библиотеки php-mcrypt
 
-- name: Cache updating
+- name: Cache updating    #Апдейт кэша репозиториев
   apt: 
-    update_cache: yes
-
-- name: Cache updating
-  apt: 
-    name: python3-pip
     update_cache: yes
 
 - name: Installing LAMP
   package:
-    name: ['apache2', 'mysql-server', 'php7.2', 'curl']
-    state: present
-
-- name: Installing php modules
-  apt:
-    name: ['php7.2-curl', 'php7.1-mcrypt', 'php7.2-gd', 'php-mbstring', 'php-xml', 'php-xmlrpc', 'php-dev', 'libmcrypt-dev', 'php-pear', 'php7.2-mysql', 'libapache2-mod-php']
-    update_cache: yes        
-    state: present 
+    name: ['apache2', 'mysql-server', 'php7.2', 'curl', 'python3-pip']  #установка LAMP стэка
 
 - pip:
-    name: pymysql
+    name: pymysql   #Установка библиотеки mysql для python 
+
+- name: Installing php modules   # установка модулей для php
+  apt:
+    name: ['php7.2-curl', 'php7.1-mcrypt', 'php7.2-gd', 'php-mbstring', 'php-xml', 'php-xmlrpc', 'php-dev', 'libmcrypt-dev', 'php-pear', 'php7.2-mysql', 'libapache2-mod-php']       
+    state: present 
   
-- name: Write to .my.cnf
+- name: Write to .my.cnf   #добавление в конфиг-файл mysql данный для входа в базу данных 
   blockinfile:
     path: /home/dimas/.my.cnf
     create: yes
@@ -36,37 +29,32 @@
           user=root
           password="123qwe"
 
-- name: Creating db
+- name: Creating DB        #создание базы данных wordpress
   mysql_db:
     login_unix_socket: /var/run/mysqld/mysqld.sock 
     name: wordpress
     state: present
     
-- name: Creating mysql user     
+- name: Creating mysql user  #создание пользователя базы данных+   
   mysql_user:
     login_unix_socket: /var/run/mysqld/mysqld.sock 
     name: dimas
     password: 123qwe
     priv: '*.*:ALL,GRANT'
-  notify:
-    - start services
 
-- name: Write to .my.cnf
+- name: Write mcrypt to php.ini
   blockinfile:
     path: /etc/php/7.2/cli/php.ini
     insertafter: EOF
     block: extension=mcrypt.so
 
-- name: Dooownloading wordpress and unpacking
+- name: Downloading wordpress   #Скачивание архива c wordpress
   get_url:  
     url: https://wordpress.org/latest.tar.gz 
     dest: /home/dimas
   register: module_args 
 
-- debug:
-    msg: "{{ module_args ['dest']}}"
-
-- name: Unpacking wordpress archive
+- name: Unpacking wordpress archive    #Распаковка архива c wordpress
   unarchive:
     src: "{{ module_args ['dest']}}"
     dest: /home/dimas
@@ -87,12 +75,12 @@
     state: touch
     mode: 0664
     
-- name: Creating upgrade directory
+- name: Creating upgrade directory  #Саздание директории для установки обновлений wordpress
   file:
     path: /var/www/html/wp-content/upgrade
     state: directory
 
-- name: Wordpress rights
+- name: Wordpress rights        #Установка прав на директории wordpress
   shell: |
     chown -R dimas:www-data /var/www/html
     find /var/www/html -type d -exec chmod g+s {} \;
@@ -100,20 +88,20 @@
     chmod -R g+w /var/www/html/wp-content/themes
     chmod -R g+w /var/www/html/wp-content/plugins
     
-- name: Get salt and write it to file
+- name: Get salt and write it to file   #Получение соли
   shell: curl -s https://api.wordpress.org/secret-key/1.1/salt/
   register: salt
     
-- name: Configuring wp-config
+- name: Getting wp-config  #Загрузка jinja файла c управляющей машины
   template:
     src: wp-config.j2
     dest: /var/www/html/wp-config.php
     mode: 0777
   
-- name: Remove index.html
+- name: Remove index.html   #Удаление стандартного index.html файла
   file:
     state: absent
     path: /var/www/html/index.html
 
-  notify:
+  notify:                 #перезапуск служб apache2 и mysql
     - restart services
