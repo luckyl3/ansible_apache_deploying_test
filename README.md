@@ -1,2 +1,6 @@
-# ansible_apache_deploying_test
-Test git repo with simple apache deploy
+# Apache + Wordpress deploy test using Ansible
+
+Тест деплоя апача с вордпресом с помощью ansible.
+
+Тестирование проводилось на виртуальных машинах с ОС Ubuntu 18.04 Desktop и Ubuntu Server 18.04.
+Для тестирования этого сценария на других машинах необходимо заменить ip-адресаи данные аутентификации в файле hosts.txt в корне проекта.
