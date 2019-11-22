@@ -1,2 +1,4 @@
 ---
 # defaults file for wordpress_apache_deploy
+pass: "123qwe"
+login: "dimas"

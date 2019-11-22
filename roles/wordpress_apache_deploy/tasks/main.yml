@@ -38,8 +38,8 @@
 - name: Creating mysql user  #создание пользователя базы данных+   
   mysql_user:
     login_unix_socket: /var/run/mysqld/mysqld.sock 
-    name: dimas
-    password: 123qwe
+    name: "{{login}}"
+    password: "{{ pass }}"
     priv: '*.*:ALL,GRANT'
 
 - name: Write mcrypt to php.ini
